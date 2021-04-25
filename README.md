@@ -1,1 +1,1 @@
-# Representation and serach in Reinforce Learning
+# Representation and Search in Reinforce Learning
