@@ -6,7 +6,6 @@ import sys
 
 class Agent():
     def __init__(self, env, buckets, n_episodes=1000, min_alpha=0.1, min_epsilon=0.1, gamma=0.9, alpha=0.2, epsilon=0.1, decay=0.05, cheat=False, sticky=False, softmax=False, shape_reward=False, lb=None, ub=None, balance=False):
-#    def __init__(self, env, buckets, n_episodes=1000, min_alpha=0.1, min_epsilon=0.1, gamma=1.0, decay=0.025, cheat=False, sticky=False, softmax=False, shape_reward=False, lb=None, ub=None, balance=False):
         self.env = gym.make(env)
         self.n_episodes = n_episodes
         self.min_alpha = min_alpha
@@ -29,7 +28,6 @@ class Agent():
         print(self.Q.shape)
         lb = self.env.observation_space.low if lb == None else utils.set_range(lb, self.env.observation_space.low)
         ub = self.env.observation_space.high if ub == None else utils.set_range(ub, self.env.observation_space.high)
-        self.bounds = utils.bound(buckets, lb, ub)
         print(lb, ub)
         self.buckets = buckets
         self.lb = lb
@@ -37,8 +35,7 @@ class Agent():
 
     # Discretizing input space to make Q-table and to reduce dimmensionality
     def discretize(self, obs):
-        return utils.discretise2(self.buckets, obs, self.lb, self.ub)
-        #return utils.discretise(self.bounds, obs)
+        return utils.discretise(self.buckets, obs, self.lb, self.ub)
 
     # Updating Q-value of state-action pair based on the update equation
     def update_q(self, state_old, action, reward, state_new):
@@ -53,7 +50,6 @@ class Agent():
         return max(mn, min(1.0, 1.0 - math.log((e + 1) * self.decay)))
 
     def run(self):
-        stats = utils.Stats()
         erewards = 0.0
         epsilon = self.epsilon
         for e in range(self.n_episodes):
@@ -88,10 +84,7 @@ class Agent():
                 new_state = self.discretize(obs)
 
                 if self.mc_reward_shaping:
-                    #print(reward, abs(obs[1]) - abs(last_obs[1]))
                     modified_reward = reward + (abs(obs[1]) - abs(last_obs[1]))
-                    #modified_reward = (abs(obs[1]) - abs(last_obs[1]))
-                    #modified_reward = reward
                 else:
                     modified_reward = -200 if self.cheat and done else reward
 
@@ -112,13 +105,18 @@ class Agent():
                 print("Episode ", e + 1, "average score is ", erewards / 100)
                 erewards = 0
 
-        stats.end()
         return self.episode_rewards, self.episodes, self.steps
+
+# condition or, all is forgiven
+if len(sys.argv) < 2:
+    print('Please supply parameter of CP or MC for appropriate run')
+    exit()
+elif sys.argv[1] == 'CP' and sys.argv[1] == 'MC':
+    print('Wrong parameter, please supply parameter of CP or MC for appropriate run')
+    exit()
 
 lb = [-1, -0.5, -1, -math.radians(50)]
 ub = [-1, 0.5, -1, math.radians(50)]
-agent = Agent('CartPole-v0', (1,1,6,12), n_episodes=1000, balance=False, softmax=True, gamma=1.0, lb=lb, ub=ub)
-agent.run()
 if sys.argv[1] == 'CP':
     lb = [-1, -0.5, -1, -math.radians(50)]
     ub = [-1, 0.5, -1, math.radians(50)]
@@ -152,9 +150,6 @@ if sys.argv[1] == 'CP':
     rewards, episodes, steps = agent.run()
     utils.subPlot(rewards, t)
     print(f"{t} Episodes/Steps: {episodes}/{steps}")
-    #agent = Agent('CartPole-v0', (1,1,15,25), n_episodes=1000, gamma=1.0, lb=lb, ub=ub)
-    #agent = Agent('CartPole-v0', (8,8,6,12), softmax=True, n_episodes=5000, gamma=1.0, lb=lb, ub=ub)
-    #agent = Agent('MountainCar-v0', (25,25), n_episodes=5000)
     utils.plotRewards('CartPole')
 if sys.argv[1] == 'MC':
     agent = Agent('MountainCar-v0', (25,25), n_episodes=5000, balance=False)
@@ -189,6 +184,3 @@ if sys.argv[1] == 'MC':
     print(f"{t} Episodes/Steps: {episodes}/{steps}")
 
     utils.plotRewards('MountainCar')
-    #agent = Agent('MountainCar-v0', (25,25), n_episodes=100, shape_reward=True, balance=True)
-    #agent = Agent('MountainCar-v0', (25,25), n_episodes=1000, shape_reward=True, sticky=True, balance=True)
-    #agent = Agent('MountainCar-v0', (25,25), n_episodes=5000, softmax=True, balance=True)
